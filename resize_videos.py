@@ -1,6 +1,5 @@
 import argparse
 import os
-import glob
 import cv2
 from tqdm import tqdm
 
@@ -16,13 +15,15 @@ DEFAULT_OUTPUT = "./output"
 
 def get_video_files(input_dir: str) -> list:
     """
-    Scans input directory for video files.
+    Scans input directory recursively for video files.
     Returns list of video file paths.
     """
-    extensions = ['*.mp4', '*.mov', '*.avi', '*.MP4', '*.MOV', '*.AVI']
+    allowed_extensions = {'.mp4', '.mov', '.avi'}
     video_files = []
-    for ext in extensions:
-        video_files.extend(glob.glob(os.path.join(input_dir, ext)))
+    for root, _, files in os.walk(input_dir):
+        for file in files:
+            if os.path.splitext(file)[1].lower() in allowed_extensions:
+                video_files.append(os.path.join(root, file))
     return sorted(set(video_files))
 
 
@@ -103,6 +104,12 @@ def main():
         choices=SUPPORTED_RESOLUTIONS,
         help=f"Output resolution (square): {SUPPORTED_RESOLUTIONS} (default: {DEFAULT_RESOLUTION})"
     )
+    parser.add_argument(
+        "-t", "--test",
+        type=int,
+        default=None,
+        help="Process only the first N videos (for test runs)"
+    )
     
     args = parser.parse_args()
     
@@ -116,32 +123,44 @@ def main():
     
     # Find video files
     video_files = get_video_files(args.input)
+
+    if args.test is not None:
+        if args.test <= 0:
+            print("Error: --test must be a positive integer")
+            return 1
+        video_files = video_files[:args.test]
     
     if not video_files:
         print(f"No video files found in {args.input}")
         return 0
     
     print(f"Found {len(video_files)} video(s) to process")
-    print(f"Output resolution: {args.resolution}x{args.resolution}")
+    print(f"Output resolution: {args.resolution}x{args.resolution} @ {TARGET_FPS}fps")
+
     
     # Process videos with progress bar
     success_count = 0
     failed_files = []
     
     for video_path in tqdm(video_files, desc="Processing videos", unit="video"):
+        relative_video_path = os.path.relpath(video_path, args.input)
+        relative_dir = os.path.dirname(relative_video_path)
+
         filename = os.path.basename(video_path)
         name_without_ext = os.path.splitext(filename)[0]
         output_filename = f"{name_without_ext}_{args.resolution}_{TARGET_FPS}.mp4"
-        output_path = os.path.join(args.output, output_filename)
+        output_dir = os.path.join(args.output, relative_dir)
+        os.makedirs(output_dir, exist_ok=True)
+        output_path = os.path.join(output_dir, output_filename)
         
         try:
             if resize_video(video_path, output_path, args.resolution):
                 success_count += 1
             else:
-                failed_files.append(filename)
+                failed_files.append(relative_video_path)
         except Exception as e:
             print(f"\nError processing {filename}: {e}")
-            failed_files.append(filename)
+            failed_files.append(relative_video_path)
     
     # Summary
     print(f"\nCompleted: {success_count}/{len(video_files)} videos processed successfully")
@@ -149,7 +168,8 @@ def main():
     if failed_files:
         print(f"Failed: {', '.join(failed_files)}")
         # Write failures to failed.txt
-        with open('./input/failed.txt', 'a') as f:
+        failed_log_path = os.path.join(args.input, 'failed.txt')
+        with open(failed_log_path, 'a') as f:
             for filename in failed_files:
                 f.write(f"{filename} (resize failed)\n")
     
