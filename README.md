@@ -15,6 +15,16 @@ A Python script to batch resize videos for mobile compatibility with configurabl
 ## Installation
 
 ```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+On Windows (PowerShell):
+
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
 
@@ -36,13 +46,19 @@ python resize_videos.py -i /path/to/videos -o /path/to/output
 python resize_videos.py -i ./videos -o ./resized -r 480
 ```
 
+Or without activating the environment:
+
+```bash
+./.venv/bin/python resize_videos.py -i ./videos -o ./resized -r 480
+```
+
 ### Options
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `-i`, `--input` | Input directory containing videos | `./input` |
-| `-o`, `--output` | Output directory for resized videos | `./output` |
-| `-r`, `--resolution` | Output resolution (360, 480, 720) | `720` |
+| Option               | Description                         | Default    |
+| -------------------- | ----------------------------------- | ---------- |
+| `-i`, `--input`      | Input directory containing videos   | `./input`  |
+| `-o`, `--output`     | Output directory for resized videos | `./output` |
+| `-r`, `--resolution` | Output resolution (360, 480, 720)   | `720`      |
 
 ## Output
 
@@ -55,6 +71,7 @@ python resize_videos.py -i ./videos -o ./resized -r 480
 ### Filename Format
 
 Output files are named with the resolution and frame rate:
+
 ```
 input: video.mp4
 output: video_720_30.mp4
