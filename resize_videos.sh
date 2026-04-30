@@ -179,6 +179,12 @@ for video_path in "${video_files[@]}"; do
 
   filename="$(basename "$video_path")"
   name_without_ext="${filename%.*}"
+  # Normalize the 4-char code segment to lowercase (e.g. n20X -> n20x, pX02 -> px02)
+  if [[ "$name_without_ext" =~ _([NPXnpx][NPXnpx0-9]{3})$ ]]; then
+    code="${BASH_REMATCH[1]}"
+    lowered="$(printf '%s' "$code" | tr 'A-Z' 'a-z')"
+    name_without_ext="${name_without_ext%_${code}}_${lowered}"
+  fi
   output_filename="${name_without_ext}_${resolution}_${TARGET_FPS}.mp4"
 
   if [[ "$relative_dir" == "." ]]; then
